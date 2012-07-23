@@ -19,6 +19,59 @@ front_page = """
 <html>
     <head>
 	<title>/ascii/</title>
+
+	<style>
+	    body {
+		font-family: sans-serif;
+		width: 800px;
+		margin: 0 auto;
+		padding: 10px;
+	    }
+
+	    .error {
+		color: red;
+	    }
+
+	    label {
+		display: block;
+		font-size: 20px;
+	    }
+
+	    input[type=text] {
+		width: 400px;
+		font-size: 20px;
+		padding: 2px;
+	    }
+
+	    textarea {
+		width: 400px;
+		height: 200px;
+		font-size: 17px;
+		font-family: monospace;
+	    }
+
+	    input[type=submit] {
+		font-size: 24px;
+	    }
+
+	    hr {
+		margin: 20px auto;
+	    }
+
+	    .art + .art {
+		margin-top: 20px;
+	    }
+
+	    .art-title {
+		font-weight: bold;
+	        font-size: 20px;
+	    }
+
+	    .art-body {
+		margin: 0;
+		font-size: 17px;
+	    }
+	</style>
     </head>
 
     <body>
@@ -38,15 +91,40 @@ front_page = """
 
 	    <input type="submit" name="submit" value="Submit" />
 	</form>
+
+	<hr />
+
+	%(art_images)s
+	
     </body>
 </html>
 """
 
+art_db = """
+	<div class="art">
+	    <div class="art-title">%(art_title)s</div>
+	    <pre class="art-body">%(art_body)s</pre>
+	</div>
+"""
+
+# Create the database
+class Art(db.Model):
+    title = db.StringProperty(required = True)
+    art = db.TextProperty(required = True)
+    created = db.DateTimeProperty(auto_now_add = True)
+
 # Main handler
 class MainPage(webapp2.RequestHandler):
-    # render the front page
+    # render the front page with art from the database
     def render_front(self, title="", art="", error=""):
-	self.response.out.write(front_page % {'title': title, 'art':art, 'error': error} )
+	# make the query
+	arts = db.GqlQuery("SELECT * FROM Art ORDER BY created DESC")
+	art_images = "" # creates inner html for art
+	# loop through each entity in database and write to page
+	for each_art in arts:
+	    art_images = art_images + (art_db % {'art_title': each_art.title, 'art_body': each_art.art })
+	    
+	self.response.out.write(front_page % {'title': title, 'art': art, 'error': error, 'art_images': art_images } )
 
     # handle get requests
     def get(self):
@@ -61,7 +139,11 @@ class MainPage(webapp2.RequestHandler):
 	
 	# simple error handling for the variables
 	if title and art:
-	    self.response.out.write("thanks!")
+	    # add the title and art to the database
+	    a = Art(title = title, art = art)
+	    a.put()
+	    # render the page with the art
+	    self.redirect("/")
 	else:
 	    error = "we need both a title and some artwork!"
 	    self.render_front(title, art, error)

@@ -27,12 +27,16 @@ front_page = """
 	<form method="post">
 	    <label>
 	        <div>title</div>
-		<input type="text" name="title" />
+		<input type="text" name="title" value="%(title)s" />
 	    </label>
 	    <label>
 		<div>art</div>
-		<textarea name="art"></textarea>
+		<textarea name="art">%(art)s</textarea>
 	    </label>
+
+	    <div class="error">%(error)s</div>
+
+	    <input type="submit" name="submit" value="Submit" />
 	</form>
     </body>
 </html>
@@ -40,8 +44,26 @@ front_page = """
 
 # Main handler
 class MainPage(webapp2.RequestHandler):
+    # render the front page
+    def render_front(self, title="", art="", error=""):
+	self.response.out.write(front_page % {'title': title, 'art':art, 'error': error} )
+
+    # handle get requests
     def get(self):
 	# Output text
-	self.response.out.write(front_page)
+	self.render_front()
+
+    # handle post requests
+    def post(self):
+	# get variables
+	title = self.request.get("title")
+	art = self.request.get("art")
+	
+	# simple error handling for the variables
+	if title and art:
+	    self.response.out.write("thanks!")
+	else:
+	    error = "we need both a title and some artwork!"
+	    self.render_front(title, art, error)
 
 app = webapp2.WSGIApplication([('/', MainPage)], debug=True)
